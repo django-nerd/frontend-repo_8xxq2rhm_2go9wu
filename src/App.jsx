@@ -1,6 +1,5 @@
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
-import About from './components/About';
 import Customizer from './components/Customizer';
 import Pricing from './components/Pricing';
 
@@ -26,7 +25,6 @@ export default function App() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <Hero />
-      <About />
       <Customizer />
       <Pricing />
       <Footer />
