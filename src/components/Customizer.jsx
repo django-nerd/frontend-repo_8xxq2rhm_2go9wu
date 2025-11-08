@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SlidersHorizontal, Image as ImageIcon, Sparkles } from 'lucide-react';
+import { api } from '../lib/api';
 
 export default function Customizer() {
   const [settings, setSettings] = useState({
@@ -11,14 +12,33 @@ export default function Customizer() {
   });
   const [prompt, setPrompt] = useState('A playful cyberpunk fox with neon highlights');
   const [sketch, setSketch] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('vc_user');
+    if (stored) setUser(JSON.parse(stored));
+  }, []);
 
   function handleChange(key, value) {
     setSettings((s) => ({ ...s, [key]: Number(value) }));
   }
 
-  function handleGenerate(e) {
+  async function handleGenerate(e) {
     e.preventDefault();
-    alert('Generating character with your prompt, sketch, and sliders. In a full build, this calls the backend AI pipeline.');
+    try {
+      setLoading(true);
+      const data = await api('/api/characters/generate', {
+        method: 'POST',
+        body: { prompt, settings },
+      });
+      setPreview(data.preview_url);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -72,18 +92,22 @@ export default function Customizer() {
               ))}
             </div>
 
-            <button type="submit" className="w-full rounded-xl bg-gray-900 px-4 py-3 font-semibold text-white hover:bg-gray-800">Generate Character</button>
+            <button type="submit" disabled={loading} className="w-full rounded-xl bg-gray-900 px-4 py-3 font-semibold text-white hover:bg-gray-800 disabled:opacity-60">{loading ? 'Generating…' : 'Generate Character'}</button>
           </form>
         </div>
 
         <div className="flex flex-col gap-4">
           <div className="flex-1 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
             <h3 className="mb-3 text-sm font-semibold text-gray-700">Live Preview</h3>
-            <div className="flex h-80 items-center justify-center rounded-xl bg-gray-50">
-              <div className="text-center text-gray-500">
-                <div className="mb-2 text-xs">(Preview placeholder)</div>
-                <div className="text-sm">Your character render will appear here.</div>
-              </div>
+            <div className="flex h-80 items-center justify-center overflow-hidden rounded-xl bg-gray-50">
+              {preview ? (
+                <img src={preview} alt="preview" className="h-full w-auto" />
+              ) : (
+                <div className="text-center text-gray-500">
+                  <div className="mb-2 text-xs">(Preview placeholder)</div>
+                  <div className="text-sm">Your character render will appear here.</div>
+                </div>
+              )}
             </div>
           </div>
 

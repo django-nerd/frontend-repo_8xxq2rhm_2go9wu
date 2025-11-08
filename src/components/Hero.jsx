@@ -1,10 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Spline from '@splinetool/react-spline';
 import { Rocket, User, Lock } from 'lucide-react';
+import { api } from '../lib/api';
 
 export default function Hero() {
   const [authOpen, setAuthOpen] = useState(false);
   const [mode, setMode] = useState('login');
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('vc_user');
+    if (stored) setUser(JSON.parse(stored));
+  }, []);
 
   const titleGradient = useMemo(
     () => (
@@ -35,20 +42,37 @@ export default function Hero() {
           <a href="#pricing" className="pointer-events-auto rounded-full bg-white px-6 py-3 font-semibold text-gray-900 shadow-lg transition hover:shadow-xl">
             Start Free
           </a>
-          <button onClick={() => setAuthOpen(true)} className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-6 py-3 font-semibold backdrop-blur transition hover:bg-white/20">
-            <User size={18} /> Login / Sign up
-          </button>
+          {!user && (
+            <button onClick={() => setAuthOpen(true)} className="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-6 py-3 font-semibold backdrop-blur transition hover:bg-white/20">
+              <User size={18} /> Login / Sign up
+            </button>
+          )}
         </div>
       </div>
 
       {authOpen && (
-        <AuthModal mode={mode} setMode={setMode} onClose={() => setAuthOpen(false)} />)
+        <AuthModal mode={mode} setMode={setMode} onClose={() => setAuthOpen(false)} onAuthed={(u) => { setUser(u); localStorage.setItem('vc_user', JSON.stringify(u)); setAuthOpen(false); }} />)
       }
     </section>
   );
 }
 
-function AuthModal({ mode, setMode, onClose }) {
+function AuthModal({ mode, setMode, onClose, onAuthed }) {
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const form = new FormData(e.currentTarget);
+    const email = form.get('email');
+    const password = form.get('password');
+    const username = form.get('username');
+    try {
+      const path = mode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+      const user = await api(path, { method: 'POST', body: { email, password, username } });
+      onAuthed(user);
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
@@ -61,26 +85,25 @@ function AuthModal({ mode, setMode, onClose }) {
             <Lock size={18} />
           </button>
         </div>
-        <form className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" required className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none ring-0 focus:border-gray-400" placeholder="you@example.com" />
+            <input name="email" type="email" required className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none ring-0 focus:border-gray-400" placeholder="you@example.com" />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">Password</label>
-            <input type="password" required className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none ring-0 focus:border-gray-400" placeholder="••••••••" />
+            <input name="password" type="password" required className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none ring-0 focus:border-gray-400" placeholder="••••••••" />
           </div>
           {mode === 'signup' && (
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700">Username</label>
-              <input type="text" required className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none ring-0 focus:border-gray-400" placeholder="Your handle" />
+              <input name="username" type="text" required className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none ring-0 focus:border-gray-400" placeholder="Your handle" />
             </div>
           )}
           <button type="submit" className="w-full rounded-lg bg-gray-900 px-4 py-2 font-semibold text-white hover:bg-gray-800">
             {mode === 'login' ? 'Login' : 'Create account'}
           </button>
         </form>
-        <p className="mt-3 text-center text-xs text-gray-500">This demo showcases the interface. Full authentication and payments can be enabled upon request.</p>
       </div>
     </div>
   );

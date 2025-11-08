@@ -1,9 +1,11 @@
 import { Check, Crown, Star } from 'lucide-react';
+import { api } from '../lib/api';
 
 const tiers = [
   {
     name: 'Free',
     price: '$0',
+    plan: 'free',
     tagline: 'Get started with essentials',
     features: [
       'Prompt-based basic characters',
@@ -17,6 +19,7 @@ const tiers = [
   {
     name: 'Plus',
     price: '$9/mo',
+    plan: 'plus',
     tagline: 'More power. No ads.',
     features: [
       'Advanced customization controls',
@@ -31,6 +34,7 @@ const tiers = [
   {
     name: 'Pro',
     price: '$29/mo',
+    plan: 'pro',
     tagline: 'Full features. Pro pipelines.',
     features: [
       'All Plus features',
@@ -45,6 +49,20 @@ const tiers = [
 ];
 
 export default function Pricing() {
+  async function select(plan) {
+    const stored = localStorage.getItem('vc_user');
+    if (!stored) return alert('Please login to select a plan.');
+    const user = JSON.parse(stored);
+    try {
+      const updated = await api('/api/user/plan', { method: 'POST', body: { user_id: user.id, plan } });
+      localStorage.setItem('vc_user', JSON.stringify(updated));
+      alert(`Plan updated to ${updated.plan}`);
+      window.dispatchEvent(new Event('storage')); // notify listeners
+    } catch (e) {
+      alert(e.message);
+    }
+  }
+
   return (
     <section id="pricing" className="bg-gradient-to-b from-white to-gray-50 py-16">
       <div className="mx-auto max-w-7xl px-6">
@@ -70,7 +88,7 @@ export default function Pricing() {
                   </li>
                 ))}
               </ul>
-              <button className={`mt-6 w-full rounded-xl px-4 py-2 font-semibold ${tier.highlight ? 'bg-fuchsia-600 text-white hover:bg-fuchsia-700' : 'bg-gray-900 text-white hover:bg-gray-800'}`}>
+              <button onClick={() => select(tier.plan)} className={`mt-6 w-full rounded-xl px-4 py-2 font-semibold ${tier.highlight ? 'bg-fuchsia-600 text-white hover:bg-fuchsia-700' : 'bg-gray-900 text-white hover:bg-gray-800'}`}>
                 {tier.cta}
               </button>
               {tier.name === 'Free' && (
